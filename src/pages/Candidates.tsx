@@ -2,6 +2,7 @@ import { Trash2, Users } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
+import { CandidateDrawer } from '@/components/candidates/CandidateDrawer'
 import { CandidateTable } from '@/components/candidates/CandidateTable'
 import { UploadPanel } from '@/components/candidates/UploadPanel'
 import { EmptyState } from '@/components/EmptyState'
@@ -33,6 +34,7 @@ export function CandidatesPage() {
   const [blocked, setBlocked] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmDemo, setConfirmDemo] = useState(false)
+  const [open, setOpen] = useState<{ id: string; rank?: string } | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -85,8 +87,10 @@ export function CandidatesPage() {
           action={blocked ? <Button variant="outline" asChild><Link to={blocked.includes('pattern') ? '/reference-hires/pattern' : '/job-descriptions'}>Go to setup</Link></Button> : undefined}
         />
       ) : candidates ? (
-        <CandidateTable candidates={candidates} roles={roles} slaDays={slaDays} onChanged={load} />
+        <CandidateTable candidates={candidates} roles={roles} slaDays={slaDays} onChanged={load} onOpen={(id, rank) => setOpen({ id, rank })} />
       ) : null}
+
+      <CandidateDrawer candidateId={open?.id ?? null} rankLabel={open?.rank} onClose={() => setOpen(null)} onChanged={load} />
 
       <Dialog open={confirmDemo} onOpenChange={setConfirmDemo}>
         <DialogContent>

@@ -430,3 +430,6 @@ verify_jwt = true
 
 [functions.score-candidate]
 verify_jwt = true
+
+[functions.generate-interview-brief]
+verify_jwt = true

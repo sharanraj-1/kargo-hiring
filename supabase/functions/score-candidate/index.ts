@@ -9,6 +9,7 @@
 import { z } from 'npm:zod@4.6.5'
 import { HttpError, requireFounderOrService } from '../_shared/auth.ts'
 import { corsHeaders, json } from '../_shared/cors.ts'
+import { buildAndStoreBrief } from '../_shared/brief.ts'
 import { GeminiError, generateJson, quoteIsVerbatim } from '../_shared/gemini.ts'
 import { detectPii } from '../_shared/pii.ts'
 import { findBiasTerms, redact } from '../_shared/redact.ts'
@@ -355,6 +356,7 @@ Deno.serve(async (req) => {
     await admin.from('evaluations').update({ is_current: false }).eq('candidate_id', candidateId).eq('is_current', true)
 
     const model = atsOut.model
+    const evaluationIds = new Map<string, string>()
     for (const r of perRole) {
       const { data: ev, error: evErr } = await admin.from('evaluations').insert({
         candidate_id: candidateId,
@@ -382,6 +384,7 @@ Deno.serve(async (req) => {
         raw_output: { ats: a, pattern: p },
       }).select('id').single()
       if (evErr) throw new Error(evErr.message)
+      evaluationIds.set(r.role.id, ev.id)
 
       const evidence = [
         ...r.components.map((c) => ({ kind: 'ats_component', ref_key: c.key, score: c.score, max_score: c.max, explanation: c.explanation })),
@@ -397,6 +400,11 @@ Deno.serve(async (req) => {
       const { error: eErr } = await admin.from('evaluation_evidence').insert(evidence)
       if (eErr) throw new Error(eErr.message)
     }
+
+    // Interview briefs for the applied role (and the recommended one, if different). Failures don't fail scoring.
+    const briefRoles = [...new Set([cand.applied_role_id, recommended])]
+    const briefs = await Promise.allSettled(briefRoles.map((rid) => buildAndStoreBrief(admin!, evaluationIds.get(rid)!)))
+    const briefWarnings = briefs.flatMap((b) => (b.status === 'rejected' ? [`Interview brief failed: ${b.reason instanceof Error ? b.reason.message : b.reason}`] : b.value.warnings))
 
     await admin.from('candidates').update({
       status: 'scored',
@@ -426,6 +434,7 @@ Deno.serve(async (req) => {
       scores: Object.fromEntries(perRole.map((r) => [r.role.code, { ats: r.atsScore, pattern: pScore, overall: r.overall, tier: r.tier, red_flags: r.red_flags.length }])),
       recommended_role_id: recommended,
       years_product_experience: years,
+      brief_warnings: briefWarnings,
     })
   } catch (err) {
     const message = err instanceof HttpError || err instanceof GeminiError ? err.message : 'Unexpected error while scoring'

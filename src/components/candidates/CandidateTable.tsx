@@ -57,7 +57,15 @@ type Row = {
   rank: number | null
 }
 
-export function CandidateTable({ candidates, roles, slaDays, onChanged }: { candidates: CandidateRow[]; roles: Role[]; slaDays: number; onChanged: () => void }) {
+export function CandidateTable({
+  candidates, roles, slaDays, onChanged, onOpen,
+}: {
+  candidates: CandidateRow[]
+  roles: Role[]
+  slaDays: number
+  onChanged: () => void
+  onOpen: (id: string, rankLabel?: string) => void
+}) {
   const [q, setQ] = useState('')
   const [role, setRole] = useState('all')
   const [tier, setTier] = useState('all')
@@ -205,8 +213,15 @@ export function CandidateTable({ candidates, roles, slaDays, onChanged }: { cand
           </TableHeader>
           <TableBody>
             {visible.map((r) => (
-              <TableRow key={r.c.id} className={cn(r.c.is_priority && 'bg-amber-50/40')}>
-                <TableCell>
+              <TableRow
+                key={r.c.id}
+                tabIndex={0}
+                aria-label={`Open ${r.name}`}
+                onClick={() => onOpen(r.c.id, r.rank ? `rank #${r.rank} of ${rows.filter((x) => x.rank).length}` : undefined)}
+                onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpen(r.c.id, r.rank ? `rank #${r.rank} of ${rows.filter((x) => x.rank).length}` : undefined) } }}
+                className={cn('cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring', r.c.is_priority && 'bg-amber-50/40')}
+              >
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <Button size="icon" variant="ghost" className="size-7" aria-pressed={r.c.is_priority}
                     aria-label={r.c.is_priority ? `Unpin ${r.name}` : `Pin ${r.name} as priority`} onClick={() => togglePin(r.c)}>
                     <Star className={cn('size-4', r.c.is_priority ? 'fill-amber-400 text-amber-500' : 'text-muted-foreground')} />
@@ -255,7 +270,7 @@ export function CandidateTable({ candidates, roles, slaDays, onChanged }: { cand
                 <TableCell className={cn('text-right tabular-nums', r.waiting !== null && r.waiting > slaDays && 'font-medium text-red-700')}>
                   {r.waiting ?? '—'}
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <StatusCell row={r} retrying={retrying === r.c.id} onRetry={() => retry(r.c)} onEnterName={() => setNameFor(r.c)} />
                 </TableCell>
               </TableRow>
