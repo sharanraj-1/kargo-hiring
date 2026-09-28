@@ -433,3 +433,9 @@ verify_jwt = true
 
 [functions.generate-interview-brief]
 verify_jwt = true
+
+[functions.draft-email]
+verify_jwt = true
+
+[functions.send-email]
+verify_jwt = true

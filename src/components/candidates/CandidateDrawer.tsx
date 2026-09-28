@@ -32,6 +32,7 @@ import {
   type Evaluation,
 } from '@/lib/candidateDetail'
 import { TIER_LABEL, type Tier } from '@/lib/candidates'
+import { syncDraft } from '@/lib/emails'
 import { cn } from '@/lib/utils'
 
 const TIER_CLASS: Record<Tier, string> = {
@@ -457,6 +458,13 @@ function DecisionBar({ detail, applied, onDecided }: { detail: CandidateDetail; 
       toast.success(`${DECISION_LABEL[decision]} recorded${decision !== suggestion ? ' (differs from AI suggestion)' : ''}`)
       setReason('')
       onDecided()
+      // Draft (never send) the matching email; Hold discards any unsent draft.
+      syncDraft(detail.id)
+        .then((r) => {
+          if (r.drafted) toast.message(`${r.type === 'invite' ? 'Invite' : 'Rejection'} draft ready in the Outbox. Nothing has been sent.`)
+          else if (r.discarded) toast.message('Unsent draft discarded.')
+        })
+        .catch((e) => toast.error(`Decision saved, but the email draft failed: ${e.message}. Retry from the Outbox.`))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not record decision')
     } finally {

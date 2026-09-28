@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { recordBulkPass } from '@/lib/candidateDetail'
+import { syncDrafts } from '@/lib/emails'
 import { daysWaiting, listCandidates, listRoles, type CandidateRow, type Role } from '@/lib/candidates'
 import { supabase } from '@/lib/supabase'
 
@@ -84,12 +85,16 @@ export function BelowThresholdPage() {
   async function confirmPass() {
     setBusy(true)
     try {
-      const n = await recordBulkPass([...selected], reason.trim())
+      const ids = [...selected]
+      const n = await recordBulkPass(ids, reason.trim())
       toast.success(`Pass recorded for ${n} candidate${n === 1 ? '' : 's'}. No emails have been sent.`)
       setConfirm(false)
       setReason('')
       setSelected(new Set())
       load()
+      const t = toast.loading(`Drafting rejection emails 0/${ids.length}…`)
+      const r = await syncDrafts(ids, (d) => toast.loading(`Drafting rejection emails ${d}/${ids.length}…`, { id: t }))
+      toast.success(`${r.drafted} rejection draft${r.drafted === 1 ? '' : 's'} ready in the Outbox for your review${r.failed ? ` (${r.failed} failed, retry from the Outbox)` : ''}.`, { id: t })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not record decisions')
     } finally {
