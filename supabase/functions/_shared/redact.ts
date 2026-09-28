@@ -15,11 +15,11 @@ export type RedactionResult = {
   counts: Record<string, number>
 }
 
-const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi
+export const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi
 // +91 98204 37810, 098204-37810, (022) 2345 6789, +1 415 555 0100
-const PHONE = /(?<![\w/])(?:\+\d{1,3}[\s-]?)?(?:\(?\d{2,5}\)?[\s-]?)?\d{3,5}[\s-]?\d{4,5}(?![\w/])/g
+export const PHONE = /(?<![\w/])(?:\+\d{1,3}[\s-]?)?(?:\(?\d{2,5}\)?[\s-]?)?\d{3,5}[\s-]?\d{4,5}(?![\w/])/g
 // Social/profile domains always; any other domain only when written as a link (http(s):// or www.).
-const URL =
+export const URL =
   /(?:\b(?:https?:\/\/)?(?:www\.)?(?:linkedin\.com|github\.com|gitlab\.com|twitter\.com|x\.com|facebook\.com|instagram\.com|medium\.com|behance\.net|dribbble\.com|leetcode\.com|kaggle\.com|stackoverflow\.com|about\.me)|\bhttps?:\/\/|\bwww\.)[^\s|·,;]*/gi
 const PERSONAL_LINE =
   /^[ \t]*(?:date of birth|d\.?o\.?b\.?|born|age|gender|sex|marital status|nationality|citizenship|religion|caste|father'?s name|mother'?s name|passport(?: no\.?)?|address|permanent address|current address)\b\s*[:\-–].*$/gim
@@ -43,7 +43,7 @@ function neutralisePronouns(text: string, counts: Record<string, number>): strin
 const PINCODE =/\b\d{3}\s?\d{3}\b(?=\s*(?:$|[,|·]))/gm
 
 // Indian cities/states plus common international hubs. Location is not a job signal.
-const PLACES = [
+export const PLACES = [
   'Mumbai', 'Navi Mumbai', 'Thane', 'Bombay', 'Pune', 'Bengaluru', 'Bangalore', 'Chennai', 'Madras', 'Hyderabad',
   'Secunderabad', 'Delhi', 'New Delhi', 'NCR', 'Delhi NCR', 'Gurgaon', 'Gurugram', 'Noida', 'Ghaziabad', 'Faridabad',
   'Kolkata', 'Calcutta', 'Ahmedabad', 'Surat', 'Vadodara', 'Jaipur', 'Lucknow', 'Kanpur', 'Indore', 'Bhopal', 'Nagpur',
