@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     const [candRes, piiRes, settingsRes, decRes] = await Promise.all([
       admin.from('candidates').select('id, decision_status, applied_role_id, roles!candidates_applied_role_id_fkey(title)').eq('id', candidate_id).single(),
       admin.from('candidate_pii').select('full_name, email').eq('candidate_id', candidate_id).maybeSingle(),
-      admin.from('settings').select('founder_name, signature, scheduling_link, keep_cv_on_file, templates').eq('id', 1).single(),
+      admin.from('settings').select('founder_name, signature, scheduling_link, keep_cv_on_file, templates, email_drafting').eq('id', 1).single(),
       admin.from('decisions').select('id').eq('candidate_id', candidate_id).order('decided_at', { ascending: false }).limit(1).maybeSingle(),
     ])
     if (candRes.error || !candRes.data) throw new HttpError(404, 'Candidate not found')
@@ -68,6 +68,7 @@ Deno.serve(async (req) => {
     let body: string
     let generatedBy: string
     try {
+      if (settings.email_drafting === 'template') throw new Error('Template mode is on in Settings')
       const out = await draftWithModel({ type, roleTitle, strength, hasLink, keepCvOnFile: settings.keep_cv_on_file })
       const problems = checkRules(type, out.body, { hasLink, keepCvOnFile: settings.keep_cv_on_file })
       if (problems.length) throw new Error(`AI draft broke the content rules (${problems.join('; ')})`)
@@ -75,7 +76,7 @@ Deno.serve(async (req) => {
       body = out.body
       generatedBy = out.model
     } catch (err) {
-      warnings.push(`${err instanceof Error ? err.message : 'AI draft failed'}. Used your template instead.`)
+      if (settings.email_drafting !== 'template') warnings.push(`${err instanceof Error ? err.message : 'AI draft failed'}. Used your template instead.`)
       const tpl = (settings.templates as Record<string, { subject: string; body: string }>)?.[type] ?? DEFAULT_TEMPLATES[type]
       subject = tpl.subject
       body = type === 'invite' && !hasLink ? tpl.body.replace(/.*\{\{\s*scheduling_link\s*\}\}.*/, NO_LINK_LINE) : tpl.body

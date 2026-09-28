@@ -1,25 +1,39 @@
 import { ShieldAlert } from 'lucide-react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { lazy, Suspense, type ComponentType } from 'react'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AppShell } from '@/components/layout/AppShell'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
-import { BelowThresholdPage } from '@/pages/BelowThreshold'
-import { CandidatesPage } from '@/pages/Candidates'
-import { DecisionLogPage } from '@/pages/DecisionLog'
-import { JobDescriptionsPage } from '@/pages/JobDescriptions'
 import { LoginPage } from '@/pages/Login'
-import { OutboxPage } from '@/pages/Outbox'
-import { OverviewPage } from '@/pages/Overview'
-import { ReferenceHiresPage } from '@/pages/ReferenceHires'
-import { SettingsPage } from '@/pages/Settings'
-import { SuccessPatternPage } from '@/pages/SuccessPattern'
+
+// Each screen is its own chunk, so the first load stays small.
+const page = <K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) =>
+  lazy(() => load().then((m) => ({ default: m[name] })))
+const OverviewPage = page(() => import('@/pages/Overview'), 'OverviewPage')
+const JobDescriptionsPage = page(() => import('@/pages/JobDescriptions'), 'JobDescriptionsPage')
+const ReferenceHiresPage = page(() => import('@/pages/ReferenceHires'), 'ReferenceHiresPage')
+const SuccessPatternPage = page(() => import('@/pages/SuccessPattern'), 'SuccessPatternPage')
+const CandidatesPage = page(() => import('@/pages/Candidates'), 'CandidatesPage')
+const BelowThresholdPage = page(() => import('@/pages/BelowThreshold'), 'BelowThresholdPage')
+const OutboxPage = page(() => import('@/pages/Outbox'), 'OutboxPage')
+const DecisionLogPage = page(() => import('@/pages/DecisionLog'), 'DecisionLogPage')
+const SettingsPage = page(() => import('@/pages/Settings'), 'SettingsPage')
 
 function FullPageLoading() {
   return (
     <div className="flex min-h-svh items-center justify-center" aria-busy="true" aria-label="Loading">
       <Skeleton className="h-6 w-40" />
+    </div>
+  )
+}
+
+function PageLoading() {
+  return (
+    <div className="space-y-4" aria-busy="true" aria-label="Loading">
+      <Skeleton className="h-7 w-48" /><Skeleton className="h-4 w-96 max-w-full" /><Skeleton className="h-64 w-full" />
     </div>
   )
 }
@@ -41,6 +55,15 @@ function Unauthorised({ email }: { email: string }) {
   )
 }
 
+function Screen({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation()
+  return (
+    <ErrorBoundary resetKey={pathname}>
+      <Suspense fallback={<PageLoading />}>{children}</Suspense>
+    </ErrorBoundary>
+  )
+}
+
 export default function App() {
   const auth = useAuth()
 
@@ -52,15 +75,15 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<AppShell email={auth.session.user.email ?? ''} />}>
-          <Route index element={<OverviewPage />} />
-          <Route path="job-descriptions" element={<JobDescriptionsPage />} />
-          <Route path="reference-hires" element={<ReferenceHiresPage />} />
-          <Route path="reference-hires/pattern" element={<SuccessPatternPage />} />
-          <Route path="candidates" element={<CandidatesPage />} />
-          <Route path="below-threshold" element={<BelowThresholdPage />} />
-          <Route path="outbox" element={<OutboxPage />} />
-          <Route path="decision-log" element={<DecisionLogPage />} />
-          <Route path="settings" element={<SettingsPage />} />
+          <Route index element={<Screen><OverviewPage /></Screen>} />
+          <Route path="job-descriptions" element={<Screen><JobDescriptionsPage /></Screen>} />
+          <Route path="reference-hires" element={<Screen><ReferenceHiresPage /></Screen>} />
+          <Route path="reference-hires/pattern" element={<Screen><SuccessPatternPage /></Screen>} />
+          <Route path="candidates" element={<Screen><CandidatesPage /></Screen>} />
+          <Route path="below-threshold" element={<Screen><BelowThresholdPage /></Screen>} />
+          <Route path="outbox" element={<Screen><OutboxPage /></Screen>} />
+          <Route path="decision-log" element={<Screen><DecisionLogPage /></Screen>} />
+          <Route path="settings" element={<Screen><SettingsPage /></Screen>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

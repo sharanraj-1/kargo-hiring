@@ -6,7 +6,9 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ActivityLog } from '@/components/ActivityLog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DECISION_LABEL } from '@/lib/candidateDetail'
 import { TIER_LABEL, type Tier } from '@/lib/candidates'
 import { supabase } from '@/lib/supabase'
@@ -95,6 +97,13 @@ export function DecisionLogPage() {
         A trust metric: consistently high means the scoring doesn't match your judgement and the pattern or JDs need revisiting. DEMO decisions are excluded.
       </p>
 
+      <Tabs defaultValue="decisions">
+        <TabsList className="mb-4">
+          <TabsTrigger value="decisions">Decisions</TabsTrigger>
+          <TabsTrigger value="activity">All activity</TabsTrigger>
+        </TabsList>
+        <TabsContent value="activity"><ActivityLog /></TabsContent>
+        <TabsContent value="decisions">
       {rows === null && !error ? (
         <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-11 w-full" />)}</div>
       ) : rows && rows.length === 0 ? (
@@ -131,6 +140,8 @@ export function DecisionLogPage() {
           </Table>
         </div>
       ) : null}
+        </TabsContent>
+      </Tabs>
 
       <CandidateDrawer candidateId={openId} onClose={() => setOpenId(null)} onChanged={() => {}} />
     </>
